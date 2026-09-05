@@ -1,0 +1,31 @@
+# Environment & Secret Keys
+.env
+backend/.env
+*.env
+*.env.local
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*$py.class
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+*.log
+.pytest_cache/
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDEs & System
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
