@@ -4,69 +4,71 @@ function AdminLogin({ setPage }) {
   const [userId, setUserId] = useState("")
   const [password, setPassword] = useState("")
 
-  const handleSubmit = (event) => {
-    event.preventDefault()
+  const handleSubmit = (e) => {
+    e.preventDefault()
 
     if (!userId || !password) {
-      alert("Please enter User ID and Password")
+      alert("Please enter User ID and password.")
       return
     }
 
-    console.log("Admin login details:", {
-      userId,
-      password,
-    })
-
-    // Temporary navigation
-    alert("Admin login submitted!")
+    // Temporary frontend navigation.
+    // Backend authentication will be connected later.
+    setPage("admin-dashboard")
   }
 
   return (
-    <div className="admin-login-page">
+    <div className="auth-page admin-login-page">
+      <div className="admin-login-card">
 
-      <div className="admin-login-box">
+        <div className="admin-login-icon">
+          ✦
+        </div>
 
         <h1>Admin Login</h1>
 
-        <p>
-          Login to access the admin area
+        <p className="auth-subtitle">
+          Sign in to access the administration panel
         </p>
 
         <form onSubmit={handleSubmit}>
 
-          <input
-            type="text"
-            placeholder="User ID"
-            value={userId}
-            onChange={(event) =>
-              setUserId(event.target.value)
-            }
-          />
+          <div className="form-group">
+            <label>User ID</label>
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(event) =>
-              setPassword(event.target.value)
-            }
-          />
+            <input
+              type="text"
+              placeholder="Enter admin User ID"
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+            />
+          </div>
 
-          <button type="submit">
-            Admin Login
+          <div className="form-group">
+            <label>Password</label>
+
+            <input
+              type="password"
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+
+          <button type="submit" className="auth-button">
+            Login as Admin
           </button>
 
         </form>
 
         <button
-          className="back-button"
+          className="back-login-button"
           onClick={() => setPage("login")}
         >
-          ← Back
+          ← Back to normal Login
         </button>
 
       </div>
-
     </div>
   )
 }
