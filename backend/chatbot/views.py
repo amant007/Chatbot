@@ -1,9 +1,13 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password, check_password
+from django.utils import timezone
+from google import genai
+import os
 import json
 
 from .models import User, Conversation, Message, Document, Feedback
+
 
 
 def users_list(request):
@@ -309,6 +313,173 @@ def delete_conversation(request, conversation_id):
         return JsonResponse({
             "message": "Conversation deleted successfully"
         })
+
+    except Exception as e:
+        return JsonResponse(
+            {"error": str(e)},
+            status=500
+        )
+
+@csrf_exempt
+def messages(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+
+        conversation_id = data.get("conversation_id")
+        sender_type = data.get("sender_type")
+        message_text = data.get("message_text")
+
+        if not conversation_id or not sender_type or not message_text:
+            return JsonResponse(
+                {"error": "conversation_id, sender_type and message_text are required"},
+                status=400
+            )
+
+        try:
+            conversation = Conversation.objects.get(
+                conversation_id=conversation_id
+            )
+        except Conversation.DoesNotExist:
+            return JsonResponse(
+                {"error": "Conversation not found"},
+                status=404
+            )
+
+        message = Message.objects.create(
+            conversation=conversation,
+            sender_type=sender_type,
+            message_text=message_text
+        )
+
+        return JsonResponse(
+            {
+                "message": "Message created successfully",
+                "message_id": message.message_id,
+                "conversation_id": conversation.conversation_id,
+                "sender_type": message.sender_type,
+                "message_text": message.message_text
+            },
+            status=201
+        )
+
+    elif request.method == "GET":
+        conversation_id = request.GET.get("conversation_id")
+
+        if not conversation_id:
+            return JsonResponse(
+                {"error": "conversation_id is required"},
+                status=400
+            )
+
+        messages_list = Message.objects.filter(
+            conversation_id=conversation_id
+        ).order_by("created_at")
+
+        data = []
+
+        for message in messages_list:
+            data.append(
+                {
+                    "message_id": message.message_id,
+                    "conversation_id": message.conversation_id,
+                    "sender_type": message.sender_type,
+                    "message_text": message.message_text,
+                    "created_at": message.created_at
+                }
+            )
+
+        return JsonResponse(data, safe=False)
+
+    return JsonResponse(
+        {"error": "Only GET and POST methods are allowed"},
+        status=405
+    )
+
+@csrf_exempt
+def chat(request):
+    if request.method != "POST":
+        return JsonResponse(
+            {"error": "Only POST method is allowed"},
+            status=405
+        )
+
+    try:
+        data = json.loads(request.body)
+
+        conversation_id = data.get("conversation_id")
+        message_text = data.get("message_text")
+
+        if not conversation_id or not message_text:
+            return JsonResponse(
+                {"error": "conversation_id and message_text are required"},
+                status=400
+            )
+
+        # Check whether the conversation exists
+        try:
+            conversation = Conversation.objects.get(
+                conversation_id=conversation_id
+            )
+        except Conversation.DoesNotExist:
+            return JsonResponse(
+                {"error": "Conversation not found"},
+                status=404
+            )
+
+        # Save the user's message in MySQL
+        user_message = Message.objects.create(
+            conversation=conversation,
+            sender_type="USER",
+            message_text=message_text
+        )
+
+        # Get Gemini API key from .env
+        api_key = os.getenv("GEMINI_API_KEY")
+
+        if not api_key:
+            return JsonResponse(
+                {"error": "Gemini API key is not configured"},
+                status=500
+            )
+
+        # Create Gemini client
+        client = genai.Client(api_key=api_key)
+
+        # Send the user's message to Gemini
+        response = client.models.generate_content(
+            model="gemini-3.7-flash",
+            contents=message_text
+        )
+
+        ai_response = response.text
+
+        # Save Gemini's response in MySQL
+        ai_message = Message.objects.create(
+            conversation=conversation,
+            sender_type="AI",
+            message_text=ai_response
+        )
+
+        return JsonResponse({
+            "message": "Chat response generated successfully",
+            "conversation_id": conversation.conversation_id,
+            "user_message": {
+                "message_id": user_message.message_id,
+                "sender_type": user_message.sender_type,
+                "message_text": user_message.message_text
+            },
+            "ai_message": {
+                "message_id": ai_message.message_id,
+                "sender_type": ai_message.sender_type,
+                "message_text": ai_message.message_text
+            }
+        }, status=200)
+
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"error": "Invalid JSON"},
+            status=400
+        )
 
     except Exception as e:
         return JsonResponse(

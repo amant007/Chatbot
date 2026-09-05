@@ -6,7 +6,9 @@ from chatbot.views import (
     login,
     conversations,
     rename_conversation,
-    delete_conversation
+    delete_conversation,
+    messages,
+    chat
 )
 
 urlpatterns = [
@@ -25,4 +27,6 @@ urlpatterns = [
         'api/conversations/<int:conversation_id>/delete/',
         delete_conversation
     ),
+    path('api/messages/', messages),
+    path('api/chat/', chat),
 ]
